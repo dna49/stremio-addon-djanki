@@ -1,0 +1,16 @@
+{
+  "name": "tpb-stremio-addon",
+  "version": "3.0.0",
+  "description": "Stremio addon for torrent streams",
+  "main": "addon.js",
+  "scripts": {
+    "start": "node addon.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "stremio-addon-sdk": "^1.6.10"
+  }
+}

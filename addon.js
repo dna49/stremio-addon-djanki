@@ -3,7 +3,7 @@ const axios = require("axios");
 
 const manifest = {
     id: "community.tpb.stream",
-    version: "3.0.0",
+    version: "3.0.1",
     name: "TPB Streams",
     description: "Torrent streams for movies and series from The Pirate Bay (apibay.org)",
     types: ["movie", "series"],
@@ -56,15 +56,28 @@ function formatSize(bytes) {
 }
 
 async function searchApibay(query) {
-    const response = await axios.get(API, { params: { q: query, cat: 0 }, timeout: 10000 });
-    const rows = Array.isArray(response.data) ? response.data : [];
-    return rows.filter(r => r.info_hash && r.info_hash !== NO_RESULT_HASH);
+    const response = await axios.get(API, {
+        params: { q: query, cat: 0 },
+        timeout: 10000,
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+        validateStatus: () => true
+    });
+    const isArray = Array.isArray(response.data);
+    console.log(`apibay "${query}" -> HTTP ${response.status}, array: ${isArray}, rows: ${isArray ? response.data.length : "n/a"}`);
+    if (!isArray) {
+        console.log("apibay body (first 200 chars):", String(typeof response.data === "string" ? response.data : JSON.stringify(response.data)).slice(0, 200));
+        return [];
+    }
+    const rows = response.data.filter(r => r.info_hash && r.info_hash !== NO_RESULT_HASH);
+    console.log("usable rows:", rows.length, rows[0] ? `| first: "${rows[0].name}" cat ${rows[0].category} seeders ${rows[0].seeders}` : "");
+    return rows;
 }
 
 function toStreams(rows, wantedCats) {
     const seen = new Set();
-    return rows
-        .filter(r => wantedCats.has(String(r.category)))
+    const inCat = rows.filter(r => wantedCats.has(String(r.category)));
+    console.log(`after category filter: ${inCat.length} of ${rows.length}`);
+    return inCat
         .filter(r => Number(r.seeders) >= MIN_SEEDERS)
         .sort((a, b) => Number(b.seeders) - Number(a.seeders))
         .filter(r => {

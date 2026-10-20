@@ -10,7 +10,7 @@ const manifest = {
     resources: ["stream"],
     catalogs: [],
     idPrefixes: ["tt"],
-    logo: "https://raw.githubusercontent.com/dna49/djanki-logo/blob/main/logo.png",
+    logo: "https://raw.githubusercontent.com/dna49/stremio-addon-djanki/blob/main/logo.png",
 };
 const builder = new addonBuilder(manifest);
 

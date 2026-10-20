@@ -3,7 +3,7 @@ const axios = require("axios");
 
 const manifest = {
     id: "community.multi.stream",
-    version: "4.0.4",
+    version: "4.0.5",
     name: "Djanki",
     description: "Just trust me bro, I am albanian virus lol",
     types: ["series"],
@@ -22,6 +22,8 @@ const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)";
 const YTS_HOSTS = (process.env.YTS_HOSTS || "https://yts.mx").split(",");
 const EZTV_HOSTS = (process.env.EZTV_HOSTS || "https://eztv.re,https://eztv.wf,https://eztvx.to").split(",");
 const APIBAY = "https://apibay.org/q.php";
+const KNABEN_URLS = (process.env.KNABEN_URLS || "https://api.knaben.org/v1,https://api.knaben.eu/v1").split(",");
+const TCSV_URL = process.env.TCSV_URL || "https://torrents-csv.com/service/search";
 
 const TRACKERS = [
     "udp://tracker.opentrackr.org:1337/announce",
@@ -127,6 +129,72 @@ async function fromApibay(query, wantedCats) {
 const MOVIE_CATS = new Set(["201", "202", "207", "209"]);
 const TV_CATS = new Set(["205", "208"]);
 
+function hashFromMagnet(m) {
+    const x = (m || "").match(/btih:([a-fA-F0-9]{40})/);
+    return x ? x[1] : null;
+}
+
+// Keeps only results that really match what was asked for
+function makeKeep(type, meta, season, episode) {
+    if (type === "movie") {
+        return (label) => !meta.year || String(label).includes(meta.year);
+    }
+    const re = new RegExp(`s0*${Number(season)}e0*${Number(episode)}(?!\\d)`, "i");
+    return (label) => re.test(String(label));
+}
+
+// Knaben: a search index that combines many torrent sites
+async function fromKnaben(query, keep) {
+    for (const url of KNABEN_URLS) {
+        try {
+            const r = await axios.post(url, {
+                search_type: "100%",
+                search_field: "title",
+                query,
+                order_by: "seeders",
+                order_direction: "desc",
+                size: 50
+            }, {
+                timeout: TIMEOUT,
+                headers: { "User-Agent": UA, "Content-Type": "application/json" },
+                validateStatus: () => true
+            });
+            const hits = r.data && r.data.hits;
+            console.log(`Knaben ${url} "${query}" -> HTTP ${r.status}, hits: ${Array.isArray(hits) ? hits.length : "n/a"}`);
+            if (r.status !== 200 || !Array.isArray(hits)) continue;
+            return hits
+                .map(h => ({
+                    hash: h.hash || hashFromMagnet(h.magnetUrl || h.magnet_url),
+                    label: h.title,
+                    seeds: h.seeders,
+                    size: h.bytes,
+                    source: h.tracker ? `Knaben · ${h.tracker}` : "Knaben"
+                }))
+                .filter(x => x.hash && keep(x.label));
+        } catch (e) {
+            console.log(`Knaben ${url} error: ${e.message}`);
+        }
+    }
+    return [];
+}
+
+// Torrents-CSV: an open torrent database with a public API
+async function fromTorrentsCsv(query, keep) {
+    const r = await http(TCSV_URL, { q: query, size: 50 });
+    const list = Array.isArray(r.data) ? r.data : (r.data && (r.data.torrents || r.data.results));
+    console.log(`TorrentsCSV "${query}" -> HTTP ${r.status}, ${Array.isArray(list) ? list.length + " rows" : "unexpected response"}`);
+    if (!Array.isArray(list)) return [];
+    return list
+        .map(t => ({
+            hash: t.infohash || t.info_hash,
+            label: t.name,
+            seeds: t.seeders,
+            size: t.size_bytes || t.size,
+            source: "TorrentsCSV"
+        }))
+        .filter(x => x.hash && keep(x.label));
+}
+
 // ---------- Combine ----------
 
 async function findStreams(type, id, meta) {
@@ -137,17 +205,25 @@ async function findStreams(type, id, meta) {
     const imdbId = id.split(":")[0];
     let jobs;
     if (type === "movie") {
+        const q = meta.year ? `${meta.name} ${meta.year}` : meta.name;
+        const keep = makeKeep("movie", meta);
         jobs = [
             fromYts(imdbId),
-            fromApibay(meta.year ? `${meta.name} ${meta.year}` : meta.name, MOVIE_CATS)
+            fromApibay(q, MOVIE_CATS),
+            fromKnaben(q, keep),
+            fromTorrentsCsv(q, keep)
         ];
     } else {
         const [, season, episode] = id.split(":");
         const s = String(season).padStart(2, "0");
         const e = String(episode).padStart(2, "0");
+        const q = `${meta.name} S${s}E${e}`;
+        const keep = makeKeep("series", meta, season, episode);
         jobs = [
             fromEztv(imdbId, season, episode),
-            fromApibay(`${meta.name} S${s}E${e}`, TV_CATS)
+            fromApibay(q, TV_CATS),
+            fromKnaben(q, keep),
+            fromTorrentsCsv(q, keep)
         ];
     }
 

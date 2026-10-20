@@ -3,9 +3,9 @@ const axios = require("axios");
 
 const manifest = {
     id: "community.multi.stream",
-    version: "4.0.0",
-    name: "Multi Torrent Streams",
-    description: "Torrent streams for movies (YTS, TPB) and series (EZTV, TPB)",
+    version: "4.0.1",
+    name: "Djanki Movies",
+    description: "Just trust me bro, I am albanian virus lol",
     types: ["movie", "series"],
     resources: ["stream"],
     catalogs: [],

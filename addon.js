@@ -3,14 +3,14 @@ const axios = require("axios");
 
 const manifest = {
     id: "community.multi.stream",
-    version: "4.0.1",
-    name: "Djanki Movies",
+    version: "4.0.4",
+    name: "Djanki",
     description: "Just trust me bro, I am albanian virus lol",
     types: ["movie", "series"],
     resources: ["stream"],
     catalogs: [],
     idPrefixes: ["tt"],
-    logo: "https://raw.githubusercontent.com/dna49/stremio-addon-djanki/blob/main/logo.png",
+    logo: "https://raw.githubusercontent.com/dna49/stremio-addon-djanki/refs/heads/main/logo.png",
 };
 const builder = new addonBuilder(manifest);
 

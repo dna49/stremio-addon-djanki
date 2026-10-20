@@ -2,7 +2,6 @@ const { addonBuilder, serveHTTP } = require("stremio-addon-sdk");
 const axios = require("axios");
 
 const manifest = {
-    logo: "https://raw.githubusercontent.com/dna49/djanki-logo/blob/main/logo.png"
     id: "community.multi.stream",
     version: "4.0.1",
     name: "Djanki Movies",
@@ -10,7 +9,8 @@ const manifest = {
     types: ["movie", "series"],
     resources: ["stream"],
     catalogs: [],
-    idPrefixes: ["tt"]
+    idPrefixes: ["tt"],
+    logo: "https://raw.githubusercontent.com/dna49/djanki-logo/blob/main/logo.png",
 };
 const builder = new addonBuilder(manifest);
 

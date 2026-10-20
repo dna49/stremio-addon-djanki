@@ -6,7 +6,7 @@ const manifest = {
     version: "4.0.4",
     name: "Djanki",
     description: "Just trust me bro, I am albanian virus lol",
-    types: ["movie", "series"],
+    types: ["series"],
     resources: ["stream"],
     catalogs: [],
     idPrefixes: ["tt"],
